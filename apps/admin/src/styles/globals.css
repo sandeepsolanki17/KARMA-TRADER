@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-void text-ink font-body antialiased;
+  /* Gradient mesh behind everything — glass panels have nothing to blur
+     against a flat color, so the backdrop itself needs depth and drift. */
+  background-image:
+    radial-gradient(60rem 40rem at 8% -10%, rgba(61, 220, 132, 0.10), transparent 60%),
+    radial-gradient(50rem 36rem at 100% 0%, rgba(91, 157, 255, 0.12), transparent 55%),
+    radial-gradient(70rem 50rem at 50% 120%, rgba(255, 107, 91, 0.08), transparent 60%),
+    #0B0D0F;
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(91, 157, 255, 0.35);
+}
+
+/* Thin, unobtrusive scrollbars fit a dense data console better than the OS default. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+@layer components {
+  /* Base glass surface — used for panels, cards, the sidebar, modals. */
+  .glass {
+    @apply relative bg-white/[0.045] backdrop-blur-xl border border-white/[0.08] rounded-2xl;
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+      0 8px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  .glass-strong {
+    @apply relative bg-white/[0.07] backdrop-blur-2xl border border-white/[0.10] rounded-2xl;
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.08) inset,
+      0 12px 40px rgba(0, 0, 0, 0.55);
+  }
+
+  .glass-hover {
+    @apply transition-colors duration-150 hover:bg-white/[0.07];
+  }
+
+  .glass-inset {
+    @apply bg-black/20 border border-white/[0.06] rounded-xl;
+  }
+
+  /* Data label — small caps, tracked-out, muted. Used above every metric/table header. */
+  .eyebrow {
+    @apply font-mono text-[10px] uppercase tracking-wider2 text-muted;
+  }
+
+  .figure {
+    @apply font-mono tabular-nums;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium
+      transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-info/90 text-void hover:bg-info shadow-[0_0_0_1px_rgba(91,157,255,0.4),0_0_24px_rgba(91,157,255,0.25)];
+  }
+  .btn-buy {
+    @apply btn bg-buy/90 text-void hover:bg-buy shadow-[0_0_0_1px_rgba(61,220,132,0.4),0_0_24px_rgba(61,220,132,0.25)];
+  }
+  .btn-danger {
+    @apply btn bg-sell/90 text-void hover:bg-sell shadow-[0_0_0_1px_rgba(255,107,91,0.4),0_0_24px_rgba(255,107,91,0.3)];
+  }
+  .btn-ghost {
+    @apply btn bg-white/[0.04] border border-white/[0.08] text-ink hover:bg-white/[0.08];
+  }
+
+  .input {
+    @apply w-full rounded-xl bg-black/25 border border-white/[0.08] px-3 py-2 text-sm text-ink
+      placeholder:text-muted/70 focus:outline-none focus:border-info/50 focus:ring-1 focus:ring-info/40;
+  }
+
+  .label {
+    @apply block text-xs font-medium text-muted mb-1.5;
+  }
+}

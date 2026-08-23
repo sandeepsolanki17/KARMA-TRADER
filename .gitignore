@@ -1,0 +1,26 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+.expo/
+.turbo/
+coverage/
+
+# Local configuration and credentials
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.test
+
+# EAS and mobile native build artifacts
+*.apk
+*.aab
+*.ipa
+android/
+ios/
+
+# Operating system / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

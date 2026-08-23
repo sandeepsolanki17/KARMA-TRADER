@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "869953584648",
+    "project_id": "karma-trading-eb498",
+    "storage_bucket": "karma-trading-eb498.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:869953584648:android:462a48aa30fe7fb1631bbd",
+        "android_client_info": {
+          "package_name": "com.karma.tradingsignals"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzU_YHBUUv4avnTp74k11iqoRIHZF5V6A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

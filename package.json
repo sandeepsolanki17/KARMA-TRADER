@@ -1,0 +1,17 @@
+{
+  "name": "karma-trading-platform",
+  "private": true,
+  "version": "0.1.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev:api": "pnpm --filter @karma/api dev",
+    "dev:admin": "pnpm --filter @karma/admin dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "migrate": "pnpm --filter @karma/api migrate"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

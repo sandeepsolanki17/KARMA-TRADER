@@ -1,0 +1,25 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+onlyBuiltDependencies:
+  - "@clerk/shared"
+  - esbuild
+  - msgpackr-extract
+
+# Expo's own guidance for pnpm monorepos: hoist React (and RN's core) to a
+# single shared copy at the workspace root. Without this, strict pnpm
+# isolation lets different apps in the monorepo end up with their own
+# nested React copies, and Metro/Expo's SSR export can pick up the wrong
+# one mid-bundle ("Cannot read properties of null (reading 'useEffect')").
+publicHoistPattern:
+  - "*react*"
+  - "*@react-native*"
+allowBuilds:
+  '@clerk/shared': true
+  browser-tabs-lock: true
+  bufferutil: true
+  core-js: true
+  esbuild: true
+  msgpackr-extract: true
+  utf-8-validate: true
