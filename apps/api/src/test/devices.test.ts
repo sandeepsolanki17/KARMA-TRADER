@@ -6,8 +6,13 @@ import * as devicesRepo from '../modules/devices/devices.repo.js';
 import { registerDeviceForClient } from '../modules/devices/deviceSession.service.js';
 
 describe('single active device per client', () => {
+  let orgId: string;
   beforeEach(async () => {
     await resetDb();
+    const { rows: adminRows } = await pool.query<{ id: string }>(
+      `INSERT INTO organizations (slug, name) VALUES ('test-org', 'Test Org') RETURNING id`
+    );
+    orgId = adminRows[0]!.id;
   });
 
   afterAll(async () => {

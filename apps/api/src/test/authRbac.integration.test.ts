@@ -51,6 +51,7 @@ const { resetDb } = await import('./helpers.js');
 describe('RBAC + client isolation with mocked Clerk verification', () => {
   let app: FastifyInstance;
   let adminUserId: string;
+  let orgId: string;
   let clientA: { userId: string; clientId: string };
   let clientB: { userId: string; clientId: string };
   let clientExpired: { userId: string; clientId: string };
@@ -69,11 +70,16 @@ describe('RBAC + client isolation with mocked Clerk verification', () => {
   beforeEach(async () => {
     await resetDb();
 
-    const { rows: adminRows } = await pool.query<{ id: string }>(
-      `INSERT INTO users (clerk_user_id, role, status) VALUES ($1, 'ADMIN', 'ACTIVE') RETURNING id`,
-      ['clerk_admin_fake_1'],
+    const { rows: adminRows } = await pool.query<{ id: string; org_id: string }>(
+      `INSERT INTO organizations (slug, name) VALUES ('test-org', 'Test Org') RETURNING id`
     );
-    adminUserId = adminRows[0]!.id;
+    orgId = adminRows[0]!.id;
+
+    const { rows: userRows } = await pool.query<{ id: string }>(
+      `INSERT INTO users (clerk_user_id, role, status, org_id) VALUES ($1, 'ADMIN', 'ACTIVE', $2) RETURNING id`,
+      ['clerk_admin_fake_1', orgId],
+    );
+    adminUserId = userRows[0]!.id;
 
     clientA = await seedClient('clerk_client_fake_a', true);
     clientB = await seedClient('clerk_client_fake_b', true);
@@ -82,14 +88,14 @@ describe('RBAC + client isolation with mocked Clerk verification', () => {
 
   async function seedClient(clerkUserId: string, membershipActive: boolean) {
     const { rows: userRows } = await pool.query<{ id: string }>(
-      `INSERT INTO users (clerk_user_id, role, status) VALUES ($1, 'CLIENT', 'ACTIVE') RETURNING id`,
-      [clerkUserId],
+      `INSERT INTO users (clerk_user_id, role, status, org_id) VALUES ($1, 'CLIENT', 'ACTIVE', $2) RETURNING id`,
+      [clerkUserId, orgId],
     );
     const userId = userRows[0]!.id;
     const { rows: clientRows } = await pool.query<{ id: string }>(
-      `INSERT INTO clients (user_id, clerk_user_id, name, preferred_broker, invited_email, joined_at)
-       VALUES ($1, $2, $3, 'ANGEL_ONE', $4, now()) RETURNING id`,
-      [userId, clerkUserId, `Test ${clerkUserId}`, `${clerkUserId}@example.test`],
+      `INSERT INTO clients (user_id, clerk_user_id, name, preferred_broker, invited_email, joined_at, org_id)
+       VALUES ($1, $2, $3, 'ANGEL_ONE', $4, now(), $5) RETURNING id`,
+      [userId, clerkUserId, `Test ${clerkUserId}`, `${clerkUserId}@example.test`, orgId],
     );
     const clientId = clientRows[0]!.id;
     const expiresAt = membershipActive ? "now() + interval '30 days'" : "now() - interval '1 day'";

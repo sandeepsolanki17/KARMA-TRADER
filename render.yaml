@@ -3,7 +3,7 @@ services:
   - type: web
     name: karma-api
     env: node
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @karma/types build && pnpm --filter @karma/api build
     startCommand: cd apps/api && pnpm migrate && pnpm start
     envVars:
       - key: NODE_ENV
@@ -12,12 +12,10 @@ services:
         value: 8080
       - key: LOG_LEVEL
         value: info
-      # Provided by Render PostgreSQL
+      # To be filled by user in Render Dashboard (Neon PostgreSQL)
       - key: DATABASE_URL
-        fromDatabase:
-          name: karma-db
-          property: connectionString
-      # To be filled by user in Render Dashboard
+        sync: false
+      # To be filled by user in Render Dashboard (Upstash Redis)
       - key: REDIS_URL
         sync: false
       - key: CLERK_SECRET_KEY
@@ -37,7 +35,7 @@ services:
   - type: web
     name: karma-admin
     env: static
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm -r build
+    buildCommand: npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @karma/types build && pnpm --filter @karma/admin build
     staticPublishPath: apps/admin/dist
     envVars:
       - key: VITE_API_URL
@@ -49,10 +47,5 @@ services:
   - type: web
     name: karma-landing
     env: static
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm -r build
-    staticPublishPath: apps/landing/dist
-
-databases:
-  - name: karma-db
-    plan: free
-    postgresMajorVersion: 15
+    buildCommand: echo "Static HTML"
+    staticPublishPath: apps/landing

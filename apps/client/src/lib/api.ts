@@ -32,6 +32,7 @@ async function request<T>(path: string, options: RequestInit = {}, explicitToken
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'Bypass-Tunnel-Reminder': 'true',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers ?? {}),
     },
