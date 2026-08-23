@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, type ViewProps } from 'react-native';
 import { colors, radius } from '../lib/theme';
-import type { AccountStatus, MembershipStatus, SignalStatus } from '@karma/types';
+import type { AccountStatus, MembershipStatus, SignalStatus } from '../types';
 
 export function GlassPanel({ style, children, ...rest }: ViewProps) {
   return (

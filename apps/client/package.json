@@ -12,7 +12,6 @@
   "dependencies": {
     "@babel/runtime": "^7.24.0",
     "@clerk/clerk-expo": "^2.2.9",
-    "@karma/types": "workspace:*",
     "@tanstack/react-query": "^5.56.2",
     "expo": "~51.0.28",
     "expo-auth-session": "~5.5.2",

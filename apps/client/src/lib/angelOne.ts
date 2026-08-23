@@ -1,5 +1,5 @@
 import { Linking, Platform } from 'react-native';
-import type { BrokerOrderHint } from '@karma/types';
+import type { BrokerOrderHint } from '../types';
 
 /**
  * IMPORTANT — READ BEFORE CHANGING THIS FILE.

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Client, Device, Membership, Signal, SignalEvent } from '@karma/types';
+import type { Client, Device, Membership, Signal, SignalEvent } from '../types';
 import { api } from './api';
 
 export function useMyProfile(enabled = true) {
