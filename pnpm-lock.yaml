@@ -142,15 +142,15 @@ importers:
       '@clerk/clerk-expo':
         specifier: ^2.2.9
         version: 2.20.0(63498f69a38deac0c5019fce3fb9125f)
-      '@karma/types':
-        specifier: workspace:*
-        version: link:../../packages/types
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.101.4(react@18.2.0)
       expo:
         specifier: ~51.0.28
         version: 51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(bufferutil@4.1.0)(react@18.2.0)(supports-color@8.1.1)(utf-8-validate@6.0.6))(react@18.2.0)(supports-color@8.1.1)(utf-8-validate@6.0.6)
+      expo-asset:
+        specifier: ~10.0.10
+        version: 10.0.10(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(bufferutil@4.1.0)(react@18.2.0)(supports-color@8.1.1)(utf-8-validate@6.0.6))(react@18.2.0)(supports-color@8.1.1)(utf-8-validate@6.0.6))(supports-color@8.1.1)
       expo-auth-session:
         specifier: ~5.5.2
         version: 5.5.2(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(bufferutil@4.1.0)(react@18.2.0)(supports-color@8.1.1)(utf-8-validate@6.0.6))(react@18.2.0)(supports-color@8.1.1)(utf-8-validate@6.0.6))(supports-color@8.1.1)
