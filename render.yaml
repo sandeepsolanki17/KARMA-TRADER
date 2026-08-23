@@ -41,10 +41,7 @@ services:
     staticPublishPath: apps/admin/dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: karma-api
-          property: url
+        sync: false
       - key: VITE_CLERK_PUBLISHABLE_KEY
         sync: false
 
