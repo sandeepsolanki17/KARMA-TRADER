@@ -161,7 +161,7 @@ describe('RBAC + client isolation with mocked Clerk verification', () => {
     // Publish a signal while only client B is eligible.
     await pool.query(`UPDATE memberships SET status = 'EXPIRED' WHERE client_id = $1`, [clientA.clientId]);
     const { createDraft, publishSignal } = await import('../modules/signals/signals.service.js');
-    const signal = await createDraft(adminUserId, {
+    const signal = await createDraft(adminUserId, orgId, {
       side: 'BUY',
       instrumentDisplayName: 'IDOR TEST SIGNAL',
       tradePlan: { entry: 100, stopLoss: 90, target1: 110, target2: null, target3: null, partialExitPercentages: null },

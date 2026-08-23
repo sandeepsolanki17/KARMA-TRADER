@@ -16,8 +16,19 @@ export interface User {
   clerkUserId: string;
   role: UserRole;
   status: AccountStatus;
+  orgId: string | null;
   createdAt: string;
   lastSeenAt: string | null;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  ownerUserId: string;
+  status: 'ACTIVE' | 'SUSPENDED';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Client {
@@ -83,6 +94,7 @@ export interface BrokerOrderHint {
 export interface Signal {
   id: string;
   createdByAdminId: string;
+  orgId: string;
   status: SignalStatus;
   side: SignalSide;
   instrumentDisplayName: string;
@@ -131,6 +143,7 @@ export interface NotificationJob {
 export interface AuditEvent {
   id: string;
   actorAdminId: string | null;
+  orgId: string | null;
   action: string;
   targetType: string;
   targetId: string;

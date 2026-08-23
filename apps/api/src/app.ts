@@ -8,6 +8,7 @@ import { registerHealthRoutes } from './modules/health/health.routes.js';
 import { registerClientRoutes } from './modules/clients/clients.routes.js';
 import { registerDeviceRoutes } from './modules/devices/devices.routes.js';
 import { registerSignalRoutes } from './modules/signals/signals.routes.js';
+import { registerOrganizationRoutes } from './modules/organizations/organizations.routes.js';
 import { registerClerkWebhookRoutes } from './modules/webhooks/clerkWebhook.routes.js';
 import { registerBrokerRoutes } from './modules/broker/broker.routes.js';
 import { listAuditEvents } from './modules/audit/audit.service.js';
@@ -60,11 +61,16 @@ export async function buildApp(): Promise<FastifyInstance> {
   registerClientRoutes(app);
   registerDeviceRoutes(app);
   registerSignalRoutes(app);
+  registerOrganizationRoutes(app);
   registerClerkWebhookRoutes(app, env.CLERK_WEBHOOK_SECRET);
   registerBrokerRoutes(app);
 
-  app.get('/admin/audit', { preHandler: [verifyClerkSession, requireAdmin] }, async (_request, reply) => {
-    const events = await listAuditEvents();
+  app.get('/admin/audit', { preHandler: [verifyClerkSession, requireAdmin] }, async (request, reply) => {
+    if (!request.currentOrg) {
+      reply.send({ events: [] });
+      return;
+    }
+    const events = await listAuditEvents(request.currentOrg.id);
     reply.send({ events });
   });
 

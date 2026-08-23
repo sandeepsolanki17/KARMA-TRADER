@@ -34,14 +34,14 @@ describe('client isolation', () => {
   });
 
   it('a client only sees signals they were a recipient of, never another client\'s', async () => {
-    const adminId = await createTestAdmin();
-    const clientA = await createTestClient({ membershipActive: true, name: 'Client A' });
-    const clientB = await createTestClient({ membershipActive: true, name: 'Client B' });
+    const { adminId, orgId } = await createTestAdmin();
+    const clientA = await createTestClient({ orgId });
+    const clientB = await createTestClient({ orgId });
     await registerTestDevice(clientA.clientId);
     await registerTestDevice(clientB.clientId);
 
     // Publish one signal while both are eligible — both should see it.
-    const sharedSignal = await signalService.createDraft(adminId, draftInput);
+    const sharedSignal = await signalService.createDraft(adminId, orgId, draftInput);
     await signalService.publishSignal(sharedSignal.id, adminId, randomUUID());
 
     const aSignals = await signalRepo.listSignalsForClient(clientA.clientId);
@@ -51,7 +51,7 @@ describe('client isolation', () => {
 
     // Suspend client B's membership, then publish a second signal — only A should get it.
     await pool.query(`UPDATE memberships SET status = 'EXPIRED' WHERE client_id = $1`, [clientB.clientId]);
-    const secondSignal = await signalService.createDraft(adminId, draftInput);
+    const secondSignal = await signalService.createDraft(adminId, orgId, draftInput);
     await signalService.publishSignal(secondSignal.id, adminId, randomUUID());
 
     expect(await signalRepo.clientHasAccessToSignal(clientA.clientId, secondSignal.id)).toBe(true);
@@ -65,13 +65,13 @@ describe('client isolation', () => {
   });
 
   it('notification jobs for EXIT NOW only target clients who were recipients of that specific signal', async () => {
-    const adminId = await createTestAdmin();
-    const clientA = await createTestClient({ membershipActive: true });
-    const clientB = await createTestClient({ membershipActive: true });
+    const { adminId, orgId } = await createTestAdmin();
+    const clientA = await createTestClient({ orgId });
+    const clientB = await createTestClient({ orgId });
     await registerTestDevice(clientA.clientId);
     await registerTestDevice(clientB.clientId);
 
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     await signalService.publishSignal(signal.id, adminId, randomUUID());
 
     // Client B loses membership AFTER publish (already a recipient) — they keep access to this signal's updates,

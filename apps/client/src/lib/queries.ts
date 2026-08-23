@@ -7,6 +7,9 @@ export function useMyProfile(enabled = true) {
     queryKey: ['me'],
     queryFn: () => api.get<{ client: Client; membership: Membership | null }>('/client/me'),
     enabled,
+    // Retry up to 3 times with 2s delay — gives on-demand provisioning time to complete
+    retry: 3,
+    retryDelay: 2000,
     refetchInterval: 60_000,
   });
 }

@@ -35,6 +35,7 @@ import type { BrokerOrderHint } from '../types';
 const ANGEL_ONE_ANDROID_PACKAGE = 'com.msf.angelmobile';
 const ANGEL_ONE_IOS_APP_STORE_URL = 'https://apps.apple.com/in/app/angel-one/id1044994264';
 const ANGEL_ONE_ANDROID_PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANGEL_ONE_ANDROID_PACKAGE}`;
+const ANGEL_ONE_ANDROID_INTENT = `intent://#Intent;package=${ANGEL_ONE_ANDROID_PACKAGE};end;`;
 
 export interface AngelOneOrderParams {
   variety: 'NORMAL' | 'AMO';
@@ -66,12 +67,30 @@ export function toAngelOneOrderParams(hint: BrokerOrderHint, entryPrice: number)
 }
 
 /**
- * Opens Angel One's verified store listing. This is deliberately not an
- * "open app" or order deep-link because neither behavior is publicly
- * documented by Angel One for the consumer application.
+ * Attempts to open the Angel One app directly on Android via an intent.
+ * Falls back to the verified store listing if not installed or on iOS.
  */
-export async function openAngelOneStore(): Promise<string> {
+export async function openAngelOneApp(): Promise<string> {
+  if (Platform.OS === 'android') {
+    try {
+      await Linking.openURL(ANGEL_ONE_ANDROID_INTENT);
+      return ANGEL_ONE_ANDROID_INTENT;
+    } catch (e) {
+      // Fall through to store
+    }
+  }
+
   const fallbackUrl = Platform.OS === 'ios' ? ANGEL_ONE_IOS_APP_STORE_URL : ANGEL_ONE_ANDROID_PLAY_STORE_URL;
   await Linking.openURL(fallbackUrl);
   return fallbackUrl;
+}
+
+export function buildClipboardOrderString(params: AngelOneOrderParams): string {
+  return `Trade: ${params.transactiontype}
+Symbol: ${params.tradingsymbol}
+Order: ${params.ordertype}
+Exchange: ${params.exchange}
+Product: ${params.producttype}
+Qty: ${params.quantity ?? '—'}
+Price: ${params.price}`;
 }

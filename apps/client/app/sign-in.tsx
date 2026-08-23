@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-import { useSignIn, useSSO } from '@clerk/clerk-expo';
+import { useSignIn, useSignUp, useSSO } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { colors, radius } from '../src/lib/theme';
 import { GlassPanel } from '../src/components/GlassPanel';
@@ -24,14 +24,25 @@ function useWarmUpBrowser() {
 type Stage = 'enterEmail' | 'enterCode';
 
 /**
- * Client authentication is Email OTP or "Continue with Google" ONLY — no
- * password flow, per product requirement (SMS OTP explicitly excluded for
- * cost reasons). This mirrors Clerk's own documented email_code strategy
- * and OAuth SSO flow; nothing here is custom auth/OTP infrastructure.
+ * Combined sign-in / sign-up flow for KARMA clients.
+ *
+ * Strategy: Email OTP or "Continue with Google" only.
+ * When a client enters their email:
+ *  1. Try signIn.create() first — if they already have a Clerk account, this works.
+ *  2. If Clerk says "user not found" (identifier_not_found), automatically
+ *     fall through to signUp.create() — this creates their Clerk account.
+ *  3. Either way, send an email_code and verify it.
+ *  4. After verification, router.replace('/') → the API's on-demand
+ *     provisioning links their new Clerk ID to the pending client invite.
+ *
+ * This means: Admin invites → Client downloads APK → Client types email →
+ * Gets OTP → Enters OTP → Immediately inside the app. No waiting for
+ * invitation emails, no "user not found" errors.
  */
 export default function SignInScreen() {
   useWarmUpBrowser();
-  const { signIn, setActive, isLoaded } = useSignIn();
+  const { signIn, setActive: setActiveSignIn, isLoaded: signInLoaded } = useSignIn();
+  const { signUp, setActive: setActiveSignUp, isLoaded: signUpLoaded } = useSignUp();
   const { startSSOFlow } = useSSO();
   const router = useRouter();
 
@@ -39,36 +50,88 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Track whether we fell through to signUp so handleVerifyCode knows which to call
+  const [usingSignUp, setUsingSignUp] = useState(false);
 
+  const isLoaded = signInLoaded && signUpLoaded;
+
+  /**
+   * Sends the OTP code. Tries signIn first, falls back to signUp if the
+   * user doesn't have a Clerk account yet.
+   */
   const handleSendCode = async () => {
-    if (!isLoaded || !email) return;
+    if (!isLoaded || !email.trim()) return;
     setSubmitting(true);
+    setUsingSignUp(false);
     try {
-      await signIn.create({ identifier: email });
-      const emailFactor = signIn.supportedFirstFactors?.find((f) => f.strategy === 'email_code');
-      if (!emailFactor || !('emailAddressId' in emailFactor)) {
-        Alert.alert('No account found', 'No client account exists for this email yet — ask your admin to invite you.');
+      // --- Attempt 1: signIn (existing Clerk user) ---
+      await signIn!.create({ identifier: email.trim() });
+      const emailFactor = signIn!.supportedFirstFactors?.find((f) => f.strategy === 'email_code');
+      if (emailFactor && 'emailAddressId' in emailFactor) {
+        await signIn!.prepareFirstFactor({ strategy: 'email_code', emailAddressId: emailFactor.emailAddressId });
+        setStage('enterCode');
         return;
       }
-      await signIn.prepareFirstFactor({ strategy: 'email_code', emailAddressId: emailFactor.emailAddressId });
-      setStage('enterCode');
-    } catch (err: any) {
-      Alert.alert('Could not send code', err?.errors?.[0]?.longMessage ?? 'Check the email address and try again.');
+      // If no email_code factor available, fall through to signUp
+      throw { errors: [{ code: 'form_identifier_not_found' }] };
+    } catch (signInErr: any) {
+      const errCode = signInErr?.errors?.[0]?.code;
+      // "form_identifier_not_found" or "identifier_not_found" means no Clerk account yet — expected for new clients
+      if (errCode === 'form_identifier_not_found' || errCode === 'identifier_not_found') {
+        try {
+          // --- Attempt 2: signUp (create new Clerk account) ---
+          await signUp!.create({ emailAddress: email.trim() });
+          await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
+          setUsingSignUp(true);
+          setStage('enterCode');
+        } catch (signUpErr: any) {
+          // If signUp also fails (e.g., email already exists but signIn failed for another reason)
+          // Try one more signIn attempt
+          const signUpErrCode = signUpErr?.errors?.[0]?.code;
+          if (signUpErrCode === 'form_email_address_exists') {
+            // Email exists in Clerk but signIn failed — could be OAuth-only account
+            Alert.alert(
+              'Account exists',
+              'This email is already registered. Try "Continue with Google" instead, or check your email spelling.',
+            );
+          } else {
+            Alert.alert('Could not send code', signUpErr?.errors?.[0]?.longMessage ?? 'Please check the email and try again.');
+          }
+        }
+      } else {
+        Alert.alert('Could not send code', signInErr?.errors?.[0]?.longMessage ?? 'Check the email address and try again.');
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
+  /**
+   * Verifies the OTP code. Uses the correct Clerk method depending on
+   * whether we're in signIn or signUp flow.
+   */
   const handleVerifyCode = async () => {
     if (!isLoaded || !code) return;
     setSubmitting(true);
     try {
-      const attempt = await signIn.attemptFirstFactor({ strategy: 'email_code', code });
-      if (attempt.status === 'complete' && attempt.createdSessionId) {
-        await setActive({ session: attempt.createdSessionId });
-        router.replace('/');
+      if (usingSignUp) {
+        // --- signUp verification ---
+        const attempt = await signUp!.attemptEmailAddressVerification({ code });
+        if (attempt.status === 'complete' && attempt.createdSessionId) {
+          await setActiveSignUp!({ session: attempt.createdSessionId });
+          router.replace('/');
+        } else {
+          Alert.alert('Verification incomplete', 'Please try again.');
+        }
       } else {
-        Alert.alert('Verification incomplete', 'Please try again.');
+        // --- signIn verification ---
+        const attempt = await signIn!.attemptFirstFactor({ strategy: 'email_code', code });
+        if (attempt.status === 'complete' && attempt.createdSessionId) {
+          await setActiveSignIn!({ session: attempt.createdSessionId });
+          router.replace('/');
+        } else {
+          Alert.alert('Verification incomplete', 'Please try again.');
+        }
       }
     } catch (err: any) {
       Alert.alert('Invalid code', err?.errors?.[0]?.longMessage ?? 'That code was incorrect or has expired.');
@@ -96,6 +159,12 @@ export default function SignInScreen() {
     }
   }, [startSSOFlow, router]);
 
+  const handleBack = () => {
+    setStage('enterEmail');
+    setCode('');
+    setUsingSignUp(false);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>KARMA</Text>
@@ -112,8 +181,9 @@ export default function SignInScreen() {
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
+              editable={!submitting}
             />
-            <TouchableOpacity style={styles.button} onPress={handleSendCode} disabled={submitting || !email}>
+            <TouchableOpacity style={styles.button} onPress={handleSendCode} disabled={submitting || !email.trim()}>
               {submitting ? <ActivityIndicator color={colors.void} /> : <Text style={styles.buttonText}>Send code</Text>}
             </TouchableOpacity>
           </>
@@ -128,12 +198,14 @@ export default function SignInScreen() {
               maxLength={6}
               value={code}
               onChangeText={setCode}
+              editable={!submitting}
+              autoFocus
             />
             <TouchableOpacity style={styles.button} onPress={handleVerifyCode} disabled={submitting || code.length < 6}>
               {submitting ? <ActivityIndicator color={colors.void} /> : <Text style={styles.buttonText}>Verify</Text>}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setStage('enterEmail')}>
-              <Text style={styles.linkText}>Use a different email</Text>
+            <TouchableOpacity onPress={handleBack} disabled={submitting}>
+              <Text style={styles.linkText}>← Use a different email</Text>
             </TouchableOpacity>
           </>
         )}
@@ -149,7 +221,7 @@ export default function SignInScreen() {
         </TouchableOpacity>
       </GlassPanel>
 
-      <Text style={styles.footerHint}>New clients are invited by their admin — sign in with the email they used.</Text>
+      <Text style={styles.footerHint}>Sign in with the email your admin used to invite you.</Text>
     </View>
   );
 }

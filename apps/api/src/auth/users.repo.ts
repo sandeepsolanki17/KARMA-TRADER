@@ -7,6 +7,7 @@ interface UserRow {
   clerk_user_id: string;
   role: UserRole;
   status: AccountStatus;
+  org_id: string | null;
   created_at: string;
   last_seen_at: string | null;
 }
@@ -17,6 +18,7 @@ function toUser(row: UserRow): User {
     clerkUserId: row.clerk_user_id,
     role: row.role,
     status: row.status,
+    orgId: row.org_id,
     createdAt: row.created_at,
     lastSeenAt: row.last_seen_at,
   };

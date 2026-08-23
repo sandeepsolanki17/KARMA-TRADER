@@ -16,7 +16,7 @@ describe('single active device per client', () => {
   });
 
   it('registers a first device for a client with no prior device', async () => {
-    const client = await createTestClient({ membershipActive: true });
+    const client = await createTestClient({ orgId });
     const { device, replacedDeviceId } = await registerDeviceForClient({
       clientId: client.clientId,
       expoPushToken: 'ExponentPushToken[phoneA]',
@@ -29,7 +29,7 @@ describe('single active device per client', () => {
   });
 
   it('a new device login for the SAME client revokes the previous device — new login wins', async () => {
-    const client = await createTestClient({ membershipActive: true });
+    const client = await createTestClient({ orgId });
     const first = await registerDeviceForClient({
       clientId: client.clientId,
       expoPushToken: 'ExponentPushToken[phoneA]',
@@ -57,7 +57,7 @@ describe('single active device per client', () => {
   });
 
   it('is race-safe: two simultaneous registrations for the same client never leave two active devices', async () => {
-    const client = await createTestClient({ membershipActive: true });
+    const client = await createTestClient({ orgId });
 
     // Fire both "logins" at once — the DB-level partial unique index
     // (uniq_one_active_device_per_client) plus the row lock inside
@@ -85,8 +85,8 @@ describe('single active device per client', () => {
   });
 
   it('different clients keep independent active devices — the rule is per-client, not platform-wide', async () => {
-    const clientA = await createTestClient({ membershipActive: true });
-    const clientB = await createTestClient({ membershipActive: true });
+    const clientA = await createTestClient({ orgId });
+    const clientB = await createTestClient({ orgId });
 
     await registerDeviceForClient({
       clientId: clientA.clientId,
@@ -108,7 +108,7 @@ describe('single active device per client', () => {
   });
 
   it('re-registering the same authenticated session updates push-token metadata in place', async () => {
-    const client = await createTestClient({ membershipActive: true });
+    const client = await createTestClient({ orgId });
     const first = await registerDeviceForClient({
       clientId: client.clientId,
       expoPushToken: 'ExponentPushToken[same]',
@@ -130,7 +130,7 @@ describe('single active device per client', () => {
   });
 
   it('a revoked (superseded) device is immediately excluded from notification fanout', async () => {
-    const client = await createTestClient({ membershipActive: true });
+    const client = await createTestClient({ orgId });
     const first = await registerDeviceForClient({
       clientId: client.clientId,
       expoPushToken: 'ExponentPushToken[old]',
@@ -152,7 +152,7 @@ describe('single active device per client', () => {
   });
 
   it('a previously revoked session cannot reactivate the superseded device', async () => {
-    const client = await createTestClient({ membershipActive: true });
+    const client = await createTestClient({ orgId });
     await registerDeviceForClient({
       clientId: client.clientId,
       expoPushToken: 'ExponentPushToken[old-session]',
@@ -182,8 +182,8 @@ describe('single active device per client', () => {
   });
 
   it('a client cannot revoke another client\'s device (IDOR on the revoke path)', async () => {
-    const clientA = await createTestClient({ membershipActive: true });
-    const clientB = await createTestClient({ membershipActive: true });
+    const clientA = await createTestClient({ orgId });
+    const clientB = await createTestClient({ orgId });
     const { device } = await registerDeviceForClient({
       clientId: clientA.clientId,
       expoPushToken: 'ExponentPushToken[not-yours]',
@@ -198,7 +198,7 @@ describe('single active device per client', () => {
   });
 
   it('an invalid Expo push token format causes automatic device revocation on send attempt', async () => {
-    const client = await createTestClient({ membershipActive: true });
+    const client = await createTestClient({ orgId });
     const { device } = await registerDeviceForClient({
       clientId: client.clientId,
       expoPushToken: 'not-a-real-expo-token',

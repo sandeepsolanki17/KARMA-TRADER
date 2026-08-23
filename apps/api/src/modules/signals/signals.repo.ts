@@ -13,6 +13,7 @@ import { pool } from '../../db/pool.js';
 interface SignalRow {
   id: string;
   created_by_admin_id: string;
+  org_id: string;
   status: SignalStatus;
   side: 'BUY' | 'SELL';
   instrument_display_name: string;
@@ -41,6 +42,7 @@ function toSignal(row: SignalRow): Signal {
   return {
     id: row.id,
     createdByAdminId: row.created_by_admin_id,
+    orgId: row.org_id,
     status: row.status,
     side: row.side,
     instrumentDisplayName: row.instrument_display_name,
@@ -73,19 +75,21 @@ function toSignal(row: SignalRow): Signal {
 
 export async function insertDraftSignal(
   adminId: string,
+  orgId: string,
   input: CreateSignalDraftInput,
   dbClient: PoolClient,
 ): Promise<Signal> {
   const { rows } = await dbClient.query<SignalRow>(
     `INSERT INTO signals (
-       created_by_admin_id, side, instrument_display_name,
+       created_by_admin_id, org_id, side, instrument_display_name,
        entry, stop_loss, target1, target2, target3, partial_exit_percentages,
        broker, exchange, trading_symbol, symbol_token, order_type, product_type, quantity,
        notes, expires_at
-     ) VALUES ($1,$2,$3, $4,$5,$6,$7,$8,$9, $10,$11,$12,$13,$14,$15,$16, $17,$18)
+     ) VALUES ($1,$2,$3,$4, $5,$6,$7,$8,$9,$10, $11,$12,$13,$14,$15,$16,$17, $18,$19)
      RETURNING *`,
     [
       adminId,
+      orgId,
       input.side,
       input.instrumentDisplayName,
       input.tradePlan.entry,
@@ -119,15 +123,15 @@ export async function findSignalByIdForUpdate(id: string, dbClient: PoolClient):
   return rows[0] ? toSignal(rows[0]) : null;
 }
 
-export async function listSignals(statusFilter?: SignalStatus[]): Promise<Signal[]> {
+export async function listSignals(orgId: string, statusFilter?: SignalStatus[]): Promise<Signal[]> {
   if (statusFilter && statusFilter.length > 0) {
     const { rows } = await pool.query<SignalRow>(
-      'SELECT * FROM signals WHERE status = ANY($1) ORDER BY created_at DESC',
-      [statusFilter],
+      'SELECT * FROM signals WHERE org_id = $1 AND status = ANY($2) ORDER BY created_at DESC',
+      [orgId, statusFilter],
     );
     return rows.map(toSignal);
   }
-  const { rows } = await pool.query<SignalRow>('SELECT * FROM signals ORDER BY created_at DESC');
+  const { rows } = await pool.query<SignalRow>('SELECT * FROM signals WHERE org_id = $1 ORDER BY created_at DESC', [orgId]);
   return rows.map(toSignal);
 }
 

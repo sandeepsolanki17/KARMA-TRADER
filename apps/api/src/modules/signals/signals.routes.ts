@@ -37,19 +37,27 @@ export function registerSignalRoutes(app: FastifyInstance) {
       reply.code(400).send({ error: 'invalid_body', issues: parsed.error.flatten() });
       return;
     }
-    const signal = await service.createDraft(request.currentUser!.id, parsed.data);
+    if (!request.currentOrg) {
+      reply.code(409).send({ error: 'org_not_setup', message: 'Set up your organization before creating signals.' });
+      return;
+    }
+    const signal = await service.createDraft(request.currentUser!.id, request.currentOrg.id, parsed.data);
     reply.code(201).send({ signal });
   });
 
-  app.get('/admin/signals', { preHandler: [verifyClerkSession, requireAdmin] }, async (_request, reply) => {
-    const signals = await repo.listSignals();
+  app.get('/admin/signals', { preHandler: [verifyClerkSession, requireAdmin] }, async (request, reply) => {
+    if (!request.currentOrg) {
+      reply.send({ signals: [] });
+      return;
+    }
+    const signals = await repo.listSignals(request.currentOrg.id);
     reply.send({ signals });
   });
 
   app.get('/admin/signals/:signalId', { preHandler: [verifyClerkSession, requireAdmin] }, async (request, reply) => {
     const { signalId } = request.params as { signalId: string };
     const signal = await repo.findSignalById(signalId);
-    if (!signal) {
+    if (!signal || signal.orgId !== request.currentOrg?.id) {
       reply.code(404).send({ error: 'signal_not_found' });
       return;
     }
@@ -65,6 +73,11 @@ export function registerSignalRoutes(app: FastifyInstance) {
     { preHandler: [verifyClerkSession, requireAdmin] },
     async (request, reply) => {
       const { signalId } = request.params as { signalId: string };
+      const signal = await repo.findSignalById(signalId);
+      if (!signal || signal.orgId !== request.currentOrg?.id) {
+        reply.code(404).send({ error: 'signal_not_found' });
+        return;
+      }
       const jobs = await listJobsForSignal(signalId);
       reply.send({ jobs });
     },
@@ -82,6 +95,11 @@ export function registerSignalRoutes(app: FastifyInstance) {
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
         reply.code(400).send({ error: 'invalid_body', issues: parsed.error?.flatten() });
+        return;
+      }
+      const signal = await repo.findSignalById(signalId);
+      if (!signal || signal.orgId !== request.currentOrg?.id) {
+        reply.code(404).send({ error: 'signal_not_found' });
         return;
       }
       try {

@@ -21,9 +21,9 @@ export class SignalNotFoundError extends Error {
   }
 }
 
-export async function createDraft(adminId: string, input: CreateSignalDraftInput): Promise<Signal> {
+export async function createDraft(adminId: string, orgId: string, input: CreateSignalDraftInput): Promise<Signal> {
   return withTransaction(async (client) => {
-    const signal = await repo.insertDraftSignal(adminId, input, client);
+    const signal = await repo.insertDraftSignal(adminId, orgId, input, client);
     await repo.insertSignalEvent(
       {
         signalId: signal.id,
@@ -99,7 +99,7 @@ async function runTransition(params: {
 
     let recipientClientIds: string[];
     if (params.snapshotRecipientsNow) {
-      recipientClientIds = await listEligibleRecipientClientIds();
+      recipientClientIds = await listEligibleRecipientClientIds(current.orgId);
       await repo.snapshotRecipients(params.signalId, recipientClientIds, client);
     } else {
       recipientClientIds = await repo.listRecipientClientIds(params.signalId);

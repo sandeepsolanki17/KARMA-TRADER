@@ -43,20 +43,20 @@ describe('signals.service', () => {
   });
 
   it('creates a draft in DRAFT status', async () => {
-    const adminId = await createTestAdmin();
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const { adminId, orgId } = await createTestAdmin();
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     expect(signal.status).toBe(SignalStatus.DRAFT);
     expect(signal.tradePlan.entry).toBe(150);
   });
 
   it('publish freezes the recipient set to clients with active membership at that moment', async () => {
-    const adminId = await createTestAdmin();
-    const eligible = await createTestClient({ membershipActive: true });
-    const ineligible = await createTestClient({ membershipActive: false });
+    const { adminId, orgId } = await createTestAdmin();
+    const eligible = await createTestClient({ orgId });
+    const ineligible = await createTestClient({ membershipActive: false, orgId });
     await registerTestDevice(eligible.clientId);
     await registerTestDevice(ineligible.clientId);
 
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     const { signal: published } = await signalService.publishSignal(signal.id, adminId, randomUUID());
     expect(published.status).toBe(SignalStatus.PUBLISHED);
 
@@ -65,17 +65,17 @@ describe('signals.service', () => {
     expect(recipientIds).not.toContain(ineligible.clientId);
 
     // A client who joins AFTER publish must not retroactively gain access to this signal.
-    const lateJoiner = await createTestClient({ membershipActive: true });
+    const lateJoiner = await createTestClient({ orgId });
     const hasAccess = await signalRepo.clientHasAccessToSignal(lateJoiner.clientId, signal.id);
     expect(hasAccess).toBe(false);
   });
 
   it('retrying a mutation with the same idempotency key is a no-op (no duplicate event, no duplicate notification jobs)', async () => {
-    const adminId = await createTestAdmin();
-    const client = await createTestClient({ membershipActive: true });
+    const { adminId, orgId } = await createTestAdmin();
+    const client = await createTestClient({ orgId });
     await registerTestDevice(client.clientId);
 
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     const key = randomUUID();
 
     const first = await signalService.publishSignal(signal.id, adminId, key);
@@ -94,8 +94,8 @@ describe('signals.service', () => {
   });
 
   it('a different idempotency key for the same logical action is rejected by the state machine (already PUBLISHED)', async () => {
-    const adminId = await createTestAdmin();
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const { adminId, orgId } = await createTestAdmin();
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     await signalService.publishSignal(signal.id, adminId, randomUUID());
 
     await expect(signalService.publishSignal(signal.id, adminId, randomUUID())).rejects.toThrow(
@@ -104,8 +104,8 @@ describe('signals.service', () => {
   });
 
   it('rejects T1 hit before entry is recorded', async () => {
-    const adminId = await createTestAdmin();
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const { adminId, orgId } = await createTestAdmin();
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     await signalService.publishSignal(signal.id, adminId, randomUUID());
     await expect(signalService.markT1Hit(signal.id, adminId, randomUUID())).rejects.toThrow(
       InvalidSignalTransitionError,
@@ -113,8 +113,8 @@ describe('signals.service', () => {
   });
 
   it('walks entry -> T1 -> T2 -> T3 -> close and stamps closedAt', async () => {
-    const adminId = await createTestAdmin();
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const { adminId, orgId } = await createTestAdmin();
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     await signalService.publishSignal(signal.id, adminId, randomUUID());
     await signalService.markEntryHit(signal.id, adminId, randomUUID());
     await signalService.markT1Hit(signal.id, adminId, randomUUID());
@@ -127,10 +127,10 @@ describe('signals.service', () => {
   });
 
   it('EXIT NOW enqueues jobs on the CRITICAL priority and sets closedAt', async () => {
-    const adminId = await createTestAdmin();
-    const client = await createTestClient({ membershipActive: true });
+    const { adminId, orgId } = await createTestAdmin();
+    const client = await createTestClient({ orgId });
     await registerTestDevice(client.clientId);
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     await signalService.publishSignal(signal.id, adminId, randomUUID());
     await signalService.markEntryHit(signal.id, adminId, randomUUID());
 
@@ -144,8 +144,8 @@ describe('signals.service', () => {
   });
 
   it('stop-loss update keeps status unchanged but persists the new value', async () => {
-    const adminId = await createTestAdmin();
-    const signal = await signalService.createDraft(adminId, draftInput);
+    const { adminId, orgId } = await createTestAdmin();
+    const signal = await signalService.createDraft(adminId, orgId, draftInput);
     await signalService.publishSignal(signal.id, adminId, randomUUID());
     const { signal: updated } = await signalService.updateStopLoss(signal.id, adminId, 125, randomUUID());
     expect(updated.status).toBe(SignalStatus.PUBLISHED);

@@ -52,8 +52,8 @@ export interface ClientListItem extends Client {
   invitedEmail: string;
 }
 
-export async function listClients(): Promise<ClientListItem[]> {
-  const { rows } = await pool.query<ClientRow>('SELECT * FROM clients ORDER BY created_at DESC');
+export async function listClients(orgId: string): Promise<ClientListItem[]> {
+  const { rows } = await pool.query<ClientRow>('SELECT * FROM clients WHERE org_id = $1 ORDER BY created_at DESC', [orgId]);
   return rows.map((row) => ({ ...toClient(row), joinedAt: row.joined_at, invitedEmail: row.invited_email }));
 }
 
@@ -62,14 +62,15 @@ export interface InsertClientParams {
   phone: string | null;
   preferredBroker: BrokerId;
   invitedEmail: string;
+  orgId: string;
 }
 
-/** Creates the client record at invite time — user_id/clerk_user_id are filled in later by the Clerk webhook. */
+/** Creates the client record at invite time — user_id/clerk_user_id are filled in later by the Clerk webhook or on-demand provisioning. */
 export async function insertPendingClient(params: InsertClientParams, dbClient: PoolClient): Promise<Client> {
   const { rows } = await dbClient.query<ClientRow>(
-    `INSERT INTO clients (name, phone, preferred_broker, invited_email)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [params.name, params.phone, params.preferredBroker, params.invitedEmail],
+    `INSERT INTO clients (name, phone, preferred_broker, invited_email, org_id)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [params.name, params.phone, params.preferredBroker, params.invitedEmail, params.orgId],
   );
   return toClient(rows[0]!);
 }
@@ -96,12 +97,13 @@ export async function setClientStatus(clientId: string, status: AccountStatus): 
   return rows[0] ? toClient(rows[0]) : null;
 }
 
-/** Client ids with ACTIVE status AND a currently-active membership — the live recipient pool. */
-export async function listEligibleRecipientClientIds(): Promise<string[]> {
+/** Client ids with ACTIVE status AND a currently-active membership within an org — the live recipient pool. */
+export async function listEligibleRecipientClientIds(orgId: string): Promise<string[]> {
   const { rows } = await pool.query<{ id: string }>(
     `SELECT c.id FROM clients c
      JOIN memberships m ON m.client_id = c.id
-     WHERE c.status = 'ACTIVE' AND m.status = 'ACTIVE' AND m.expires_at > now()`,
+     WHERE c.org_id = $1 AND c.status = 'ACTIVE' AND m.status = 'ACTIVE' AND m.expires_at > now()`,
+    [orgId],
   );
   return rows.map((r) => r.id);
 }

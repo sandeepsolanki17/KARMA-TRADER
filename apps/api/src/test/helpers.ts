@@ -12,6 +12,7 @@ export async function resetDb(): Promise<void> {
       memberships,
       audit_events,
       clients,
+      organizations,
       users
     RESTART IDENTITY CASCADE
   `);
@@ -22,7 +23,16 @@ export async function createTestAdmin(clerkUserId = `admin_${Date.now()}_${Math.
     `INSERT INTO users (clerk_user_id, role, status) VALUES ($1, 'ADMIN', 'ACTIVE') RETURNING id`,
     [clerkUserId],
   );
-  return rows[0]!.id;
+  const adminId = rows[0]!.id;
+
+  const { rows: orgRows } = await pool.query<{ id: string }>(
+    `INSERT INTO organizations (name, slug, owner_user_id) VALUES ('Test Org', 'test-org-' || $1, $1) RETURNING id`,
+    [adminId],
+  );
+  const orgId = orgRows[0]!.id;
+  await pool.query('UPDATE users SET org_id = $1 WHERE id = $2', [orgId, adminId]);
+
+  return { adminId, orgId };
 }
 
 /** Creates a fully joined, active-membership client ready to receive signals. */
@@ -30,7 +40,8 @@ export async function createTestClient(opts: {
   clerkUserId?: string;
   name?: string;
   membershipActive?: boolean;
-} = {}) {
+  orgId: string;
+}) {
   const clerkUserId = opts.clerkUserId ?? `client_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const email = `${clerkUserId}@example.test`;
 
@@ -41,9 +52,9 @@ export async function createTestClient(opts: {
   const userId = userRows[0]!.id;
 
   const { rows: clientRows } = await pool.query<{ id: string }>(
-    `INSERT INTO clients (user_id, clerk_user_id, name, preferred_broker, invited_email, joined_at)
-     VALUES ($1, $2, $3, 'ANGEL_ONE', $4, now()) RETURNING id`,
-    [userId, clerkUserId, opts.name ?? 'Test Client', email],
+    `INSERT INTO clients (user_id, clerk_user_id, name, preferred_broker, invited_email, org_id, joined_at)
+     VALUES ($1, $2, $3, 'ANGEL_ONE', $4, $5, now()) RETURNING id`,
+    [userId, clerkUserId, opts.name ?? 'Test Client', email, opts.orgId],
   );
   const clientId = clientRows[0]!.id;
 

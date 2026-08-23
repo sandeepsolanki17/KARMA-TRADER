@@ -12,7 +12,9 @@ import { ClientsListPage } from './routes/ClientsListPage';
 import { ClientDetailPage } from './routes/ClientDetailPage';
 import { AuditPage } from './routes/AuditPage';
 import { SystemHealthPage } from './routes/SystemHealthPage';
-import { setTokenGetter } from './lib/api';
+import { OrganizationSetupPage } from './routes/OrganizationSetupPage';
+import { setTokenGetter, api } from './lib/api';
+import { useQuery } from '@tanstack/react-query';
 
 function TokenBridge() {
   const { getToken } = useAuth();
@@ -44,6 +46,30 @@ function AuthedLayout() {
   );
 }
 
+function OrgGuard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['current-org'],
+    queryFn: async () => {
+      const res = await api.get('/admin/organization');
+      return res.data.organization as { id: string; name: string } | null;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (data === null) {
+    return <OrganizationSetupPage />;
+  }
+
+  return <AuthedLayout />;
+}
+
 export default function App({ clerkConfigured }: { clerkConfigured: boolean }) {
   if (!clerkConfigured) return <ConfigMissingScreen />;
 
@@ -51,7 +77,7 @@ export default function App({ clerkConfigured }: { clerkConfigured: boolean }) {
     <>
       <SignedIn>
         <TokenBridge />
-        <AuthedLayout />
+        <OrgGuard />
       </SignedIn>
       <SignedOut>
         <Routes>

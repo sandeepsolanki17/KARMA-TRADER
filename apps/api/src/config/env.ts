@@ -20,6 +20,16 @@ const envSchema = z.object({
   ANGEL_ONE_API_KEY: z.string().optional().default(''),
   ANGEL_ONE_CLIENT_CODE: z.string().optional().default(''),
   ANGEL_ONE_PUBLISHER_APP_ID: z.string().optional().default(''),
+
+  // SMTP / email (used for direct invitation emails — optional, API degrades gracefully)
+  SMTP_HOST: z.string().optional().default(''),
+  SMTP_PORT: z.coerce.number().int().positive().optional().default(587),
+  SMTP_USER: z.string().optional().default(''),
+  SMTP_PASS: z.string().optional().default(''),
+  EMAIL_FROM: z.string().optional().default(''),
+
+  // KARMA app download URL included in invitation emails
+  APP_DOWNLOAD_URL: z.string().optional().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

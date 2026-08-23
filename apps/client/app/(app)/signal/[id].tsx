@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import { useSignalDetail } from '../../../src/lib/queries';
 import { GlassPanel, StatusBadge } from '../../../src/components/GlassPanel';
 import { colors, radius } from '../../../src/lib/theme';
-import { openAngelOneStore, toAngelOneOrderParams } from '../../../src/lib/angelOne';
+import { openAngelOneApp, buildClipboardOrderString, toAngelOneOrderParams } from '../../../src/lib/angelOne';
 
 export default function SignalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,11 +27,16 @@ export default function SignalDetailScreen() {
   const handleAngelOneStore = async () => {
     setOpeningBroker(true);
     try {
+      const copyText = buildClipboardOrderString(orderParams);
+      await Clipboard.setStringAsync(copyText);
       Alert.alert(
-        'Enter order manually',
-        `KARMA does not place or pre-fill orders. Review these details in Angel One:\n\n${orderParams.transactiontype} ${orderParams.tradingsymbol}\nExchange: ${orderParams.exchange}\nQty: ${orderParams.quantity ?? '—'}\nPrice: ${orderParams.price}`,
+        'Order Details Copied',
+        `Trade details have been copied to your clipboard.\n\nKARMA will now attempt to open Angel One so you can manually place the trade.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open App', onPress: () => openAngelOneApp() },
+        ]
       );
-      await openAngelOneStore();
     } finally {
       setOpeningBroker(false);
     }
@@ -67,11 +73,11 @@ export default function SignalDetailScreen() {
         {openingBroker ? (
           <ActivityIndicator color={colors.void} />
         ) : (
-          <Text style={styles.brokerButtonText}>Get Angel One</Text>
+          <Text style={styles.brokerButtonText}>Copy & Open Angel One</Text>
         )}
       </TouchableOpacity>
       <Text style={styles.brokerHint}>
-        KARMA never opens or pre-fills orders. Use the displayed trade plan to review and place any order yourself.
+        Order parameters will be copied to your clipboard. You must place the trade yourself.
       </Text>
 
       <GlassPanel style={{ marginTop: 8 }}>

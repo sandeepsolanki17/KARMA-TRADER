@@ -5,7 +5,7 @@ import { useMyProfile } from '../../src/lib/queries';
 import { api } from '../../src/lib/api';
 import { GlassPanel, StatusBadge } from '../../src/components/GlassPanel';
 import { colors } from '../../src/lib/theme';
-import type { Device } from '@karma/types';
+import type { Device } from '../../src/types';
 
 export default function ProfileScreen() {
   const { data, isLoading } = useMyProfile();

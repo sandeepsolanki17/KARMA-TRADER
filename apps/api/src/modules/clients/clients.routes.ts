@@ -3,30 +3,44 @@ import { createClientSchema, extendMembershipSchema, markPaymentSchema } from '@
 import { verifyClerkSession } from '../../auth/clerk.js';
 import { requireAdmin, requireClient } from '../../auth/rbac.js';
 import * as service from './clients.service.js';
-import { DuplicateInviteError } from './clients.service.js';
+import { DuplicateInviteError, NoOrgError } from './clients.service.js';
 import * as membershipService from '../membership/membership.service.js';
 
 export function registerClientRoutes(app: FastifyInstance) {
+  // Invite a new client to this admin's org
   app.post('/admin/clients', { preHandler: [verifyClerkSession, requireAdmin] }, async (request, reply) => {
     const parsed = createClientSchema.safeParse(request.body);
     if (!parsed.success) {
       reply.code(400).send({ error: 'invalid_body', issues: parsed.error.flatten() });
       return;
     }
+    if (!request.currentOrg) {
+      reply.code(409).send({ error: 'org_not_setup', message: 'Set up your organization before inviting clients.' });
+      return;
+    }
     try {
-      const client = await service.inviteClient(request.currentUser!.id, parsed.data);
+      const client = await service.inviteClient(request.currentUser!.id, request.currentOrg.id, parsed.data);
       reply.code(201).send({ client });
     } catch (err) {
       if (err instanceof DuplicateInviteError) {
         reply.code(409).send({ error: 'duplicate_invite', message: err.message });
         return;
       }
+      if (err instanceof NoOrgError) {
+        reply.code(409).send({ error: 'org_not_setup', message: err.message });
+        return;
+      }
       throw err;
     }
   });
 
-  app.get('/admin/clients', { preHandler: [verifyClerkSession, requireAdmin] }, async (_request, reply) => {
-    const clients = await service.listClients();
+  // List clients in this admin's org only
+  app.get('/admin/clients', { preHandler: [verifyClerkSession, requireAdmin] }, async (request, reply) => {
+    if (!request.currentOrg) {
+      reply.send({ clients: [] });
+      return;
+    }
+    const clients = await service.listClients(request.currentOrg.id);
     reply.send({ clients });
   });
 
