@@ -12,8 +12,8 @@ export function OrganizationSetupPage() {
 
   const createOrg = useMutation({
     mutationFn: async (data: { name: string; slug: string }) => {
-      const res = await api.post<any>('/admin/organization', data);
-      return res;
+      const res = await api.post<{ organization: { id: string; name: string } }>('/admin/organization', data);
+      return res.organization;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['current-org'] });

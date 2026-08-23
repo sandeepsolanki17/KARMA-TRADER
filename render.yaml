@@ -4,12 +4,10 @@ services:
     name: karma-api
     env: node
     buildCommand: npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @karma/types build && pnpm --filter @karma/api build
-    startCommand: cd apps/api && pnpm migrate && pnpm start
+    startCommand: pnpm --filter @karma/api migrate && pnpm --filter @karma/api start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 8080
       - key: LOG_LEVEL
         value: info
       # To be filled by user in Render Dashboard (Neon PostgreSQL)

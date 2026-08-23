@@ -50,8 +50,8 @@ function OrgGuard() {
   const { data, isLoading } = useQuery({
     queryKey: ['current-org'],
     queryFn: async () => {
-      const res = await api.get<any>('/admin/organization');
-      return res.organization as { id: string; name: string } | null;
+      const res = await api.get<{ organization: { id: string; name: string } | null }>('/admin/organization');
+      return res.organization;
     },
   });
 
